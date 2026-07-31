@@ -100,8 +100,64 @@
     flex-direction: column;
   }
 
-  button {
+  .placas-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .placa-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .placa-row input {
+    flex: 1;
+    text-transform: uppercase;
+  }
+
+  .icon-btn {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .add-btn {
+    background: var(--verde-claro);
+    color: var(--azul-escuro-2);
+  }
+
+  .add-btn:hover {
+    background: #7bc981;
+  }
+
+  .remove-btn {
+    background: #f5d5d5;
+    color: #a33;
+  }
+
+  .remove-btn:hover {
+    background: #f0c0c0;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
     margin-top: 8px;
+  }
+
+  button.primary {
+    flex: 2;
     background: var(--verde-claro);
     color: var(--azul-escuro-2);
     border: none;
@@ -113,11 +169,32 @@
     transition: background 0.15s, transform 0.1s;
   }
 
-  button:hover {
+  button.primary:hover {
     background: #7bc981;
   }
 
-  button:active {
+  button.primary:active {
+    transform: scale(0.98);
+  }
+
+  button.secondary {
+    flex: 1;
+    background: var(--branco);
+    color: var(--azul-escuro);
+    border: 1.5px solid var(--azul-escuro);
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  button.secondary:hover {
+    background: var(--verde-claro-2);
+  }
+
+  button.secondary:active {
     transform: scale(0.98);
   }
 
@@ -126,17 +203,6 @@
     font-size: 12px;
     color: var(--azul-escuro);
     min-height: 16px;
-  }
-
-  .saved-badge {
-    display: inline-block;
-    background: var(--verde-claro-2);
-    color: var(--azul-escuro);
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 20px;
-    margin-left: 6px;
-    border: 1px solid var(--verde-claro);
   }
 
   footer {
@@ -159,7 +225,7 @@
     <div class="field-group">
       <label for="destinatario">E-mail de destino</label>
       <input type="email" id="destinatario" placeholder="destino@exemplo.com" required>
-      <span class="hint">Este endereço fica salvo no navegador para as próximas vezes.</span>
+      <span class="hint">Salvo automaticamente no navegador.</span>
     </div>
 
     <div class="field-group">
@@ -182,7 +248,16 @@
       <input type="text" id="telefone" placeholder="(00) 00000-0000" required>
     </div>
 
-    <button type="submit">Gerar e-mail</button>
+    <div class="field-group">
+      <label>Placa(s)</label>
+      <div class="placas-wrapper" id="placasWrapper"></div>
+      <span class="hint">Clique no + para adicionar mais placas.</span>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="primary">Gerar e-mail</button>
+      <button type="button" class="secondary" id="limparBtn">Limpar</button>
+    </div>
     <div class="status" id="status"></div>
   </form>
 </div>
@@ -195,25 +270,101 @@
   const lojaInput = document.getElementById('loja');
   const cnpjInput = document.getElementById('cnpj');
   const telefoneInput = document.getElementById('telefone');
+  const placasWrapper = document.getElementById('placasWrapper');
   const status = document.getElementById('status');
   const form = document.getElementById('emailForm');
+  const limparBtn = document.getElementById('limparBtn');
 
-  // Restaura o email salvo no cache do navegador
-  const salvo = localStorage.getItem('emailPadrao_destinatario');
-  if (salvo) {
-    destinatarioInput.value = salvo;
-    status.textContent = 'E-mail de destino carregado do navegador.';
+  const CAMPOS_PERSISTENTES = {
+    destinatario: 'emailPadrao_destinatario',
+    loja: 'emailPadrao_loja',
+    cnpj: 'emailPadrao_cnpj',
+    telefone: 'emailPadrao_telefone'
+  };
+
+  // Restaura dados salvos no cache do navegador
+  function restaurarCampo(input, chave) {
+    const salvo = localStorage.getItem(chave);
+    if (salvo) input.value = salvo;
+  }
+  restaurarCampo(destinatarioInput, CAMPOS_PERSISTENTES.destinatario);
+  restaurarCampo(lojaInput, CAMPOS_PERSISTENTES.loja);
+  restaurarCampo(cnpjInput, CAMPOS_PERSISTENTES.cnpj);
+  restaurarCampo(telefoneInput, CAMPOS_PERSISTENTES.telefone);
+
+  if (destinatarioInput.value) {
+    status.textContent = 'Dados salvos carregados do navegador.';
   }
 
-  // Salva o email sempre que for alterado
-  destinatarioInput.addEventListener('change', () => {
-    localStorage.setItem('emailPadrao_destinatario', destinatarioInput.value.trim());
+  // Salva automaticamente ao digitar/alterar
+  [
+    [destinatarioInput, CAMPOS_PERSISTENTES.destinatario],
+    [lojaInput, CAMPOS_PERSISTENTES.loja],
+    [cnpjInput, CAMPOS_PERSISTENTES.cnpj],
+    [telefoneInput, CAMPOS_PERSISTENTES.telefone]
+  ].forEach(([input, chave]) => {
+    input.addEventListener('input', () => {
+      localStorage.setItem(chave, input.value.trim());
+    });
   });
+
+  // --- Campos de Placa dinâmicos ---
+  function criarLinhaPlaca(comBotaoAdd) {
+    const row = document.createElement('div');
+    row.className = 'placa-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'placa-input';
+    input.placeholder = 'ABC-1234';
+    input.maxLength = 8;
+
+    row.appendChild(input);
+
+    if (comBotaoAdd) {
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'icon-btn add-btn';
+      addBtn.textContent = '+';
+      addBtn.title = 'Adicionar outra placa';
+      addBtn.addEventListener('click', () => {
+        const novaRow = criarLinhaPlaca(false);
+        placasWrapper.appendChild(novaRow);
+        novaRow.querySelector('input').focus();
+      });
+      row.appendChild(addBtn);
+    } else {
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'icon-btn remove-btn';
+      removeBtn.textContent = '×';
+      removeBtn.title = 'Remover esta placa';
+      removeBtn.addEventListener('click', () => {
+        row.remove();
+      });
+      row.appendChild(removeBtn);
+    }
+
+    return row;
+  }
+
+  function resetarPlacas() {
+    placasWrapper.innerHTML = '';
+    placasWrapper.appendChild(criarLinhaPlaca(true));
+  }
+
+  resetarPlacas();
 
   function formatarDataBR(valorISO) {
     if (!valorISO) return '';
     const [ano, mes, dia] = valorISO.split('-');
     return `${dia}/${mes}`;
+  }
+
+  function obterPlacas() {
+    return Array.from(document.querySelectorAll('.placa-input'))
+      .map(el => el.value.trim().toUpperCase())
+      .filter(v => v.length > 0);
   }
 
   form.addEventListener('submit', (e) => {
@@ -224,16 +375,18 @@
     const loja = lojaInput.value.trim();
     const cnpj = cnpjInput.value.trim();
     const telefone = telefoneInput.value.trim();
+    const placas = obterPlacas();
 
     if (!destinatario || !dataBR || !loja || !cnpj || !telefone) {
       status.textContent = 'Preencha todos os campos antes de gerar o e-mail.';
       return;
     }
 
-    // Salva o destinatário definitivamente
-    localStorage.setItem('emailPadrao_destinatario', destinatario);
-
     const assunto = `Coleta Veículos - Evento Carbank ${dataBR}`;
+
+    const linhasPlacas = placas.length > 0
+      ? placas.join(', ')
+      : '(informar placa)';
 
     const corpo =
 `Olá, tudo bem?
@@ -243,6 +396,7 @@ Segue abaixo os dados para a retirada dos carros do evento data ${dataBR}.
 Nome da loja: ${loja}
 CNPJ: ${cnpj}
 Tel contato: ${telefone}
+Placa(s): ${linhasPlacas}
 
 Em anexo a CNH do responsável.`;
 
@@ -251,6 +405,13 @@ Em anexo a CNH do responsável.`;
     window.location.href = mailtoLink;
 
     status.textContent = 'Abrindo seu programa de e-mail...';
+  });
+
+  // Botão Limpar: reseta apenas data do evento e placas
+  limparBtn.addEventListener('click', () => {
+    dataInput.value = '';
+    resetarPlacas();
+    status.textContent = 'Data e placas limpas. Os demais dados continuam salvos.';
   });
 </script>
 
