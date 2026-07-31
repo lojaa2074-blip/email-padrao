@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Padrão</title>
+<style>
+  :root {
+    --branco: #ffffff;
+    --verde-claro: #8fd694;
+    --verde-claro-2: #e7f7e9;
+    --azul-escuro: #0d3b66;
+    --azul-escuro-2: #0a2f52;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(180deg, var(--verde-claro-2) 0%, var(--branco) 100%);
+    color: var(--azul-escuro);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+
+  .card {
+    background: var(--branco);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 16px;
+    box-shadow: 0 8px 28px rgba(13, 59, 102, 0.15);
+    overflow: hidden;
+    border-top: 6px solid var(--verde-claro);
+  }
+
+  header {
+    background: var(--azul-escuro);
+    padding: 22px 24px;
+    text-align: center;
+  }
+
+  header h1 {
+    color: var(--branco);
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+  }
+
+  header p {
+    color: var(--verde-claro);
+    margin: 6px 0 0;
+    font-size: 13px;
+  }
+
+  form {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--azul-escuro);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #cfe8d1;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--azul-escuro);
+    background: var(--verde-claro-2);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--azul-escuro);
+    box-shadow: 0 0 0 3px rgba(13, 59, 102, 0.12);
+    background: var(--branco);
+  }
+
+  .hint {
+    font-size: 11px;
+    color: #6b8f74;
+    margin-top: 4px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  button {
+    margin-top: 8px;
+    background: var(--verde-claro);
+    color: var(--azul-escuro-2);
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  button:hover {
+    background: #7bc981;
+  }
+
+  button:active {
+    transform: scale(0.98);
+  }
+
+  .status {
+    text-align: center;
+    font-size: 12px;
+    color: var(--azul-escuro);
+    min-height: 16px;
+  }
+
+  .saved-badge {
+    display: inline-block;
+    background: var(--verde-claro-2);
+    color: var(--azul-escuro);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: 6px;
+    border: 1px solid var(--verde-claro);
+  }
+
+  footer {
+    text-align: center;
+    font-size: 11px;
+    color: #9fb5c7;
+    padding: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <header>
+    <h1>Email Padrão</h1>
+    <p>Coleta de Veículos · Evento Carbank</p>
+  </header>
+
+  <form id="emailForm">
+    <div class="field-group">
+      <label for="destinatario">E-mail de destino</label>
+      <input type="email" id="destinatario" placeholder="destino@exemplo.com" required>
+      <span class="hint">Este endereço fica salvo no navegador para as próximas vezes.</span>
+    </div>
+
+    <div class="field-group">
+      <label for="dataEvento">Data do evento</label>
+      <input type="date" id="dataEvento" required>
+    </div>
+
+    <div class="field-group">
+      <label for="loja">Nome da loja</label>
+      <input type="text" id="loja" placeholder="Ex: Loja Carbank Osasco" required>
+    </div>
+
+    <div class="field-group">
+      <label for="cnpj">CNPJ</label>
+      <input type="text" id="cnpj" placeholder="00.000.000/0000-00" required>
+    </div>
+
+    <div class="field-group">
+      <label for="telefone">Telefone de contato</label>
+      <input type="text" id="telefone" placeholder="(00) 00000-0000" required>
+    </div>
+
+    <button type="submit">Gerar e-mail</button>
+    <div class="status" id="status"></div>
+  </form>
+</div>
+
+<footer>Lembre-se de anexar a CNH do responsável antes de enviar — o link de e-mail não anexa arquivos automaticamente.</footer>
+
+<script>
+  const destinatarioInput = document.getElementById('destinatario');
+  const dataInput = document.getElementById('dataEvento');
+  const lojaInput = document.getElementById('loja');
+  const cnpjInput = document.getElementById('cnpj');
+  const telefoneInput = document.getElementById('telefone');
+  const status = document.getElementById('status');
+  const form = document.getElementById('emailForm');
+
+  // Restaura o email salvo no cache do navegador
+  const salvo = localStorage.getItem('emailPadrao_destinatario');
+  if (salvo) {
+    destinatarioInput.value = salvo;
+    status.textContent = 'E-mail de destino carregado do navegador.';
+  }
+
+  // Salva o email sempre que for alterado
+  destinatarioInput.addEventListener('change', () => {
+    localStorage.setItem('emailPadrao_destinatario', destinatarioInput.value.trim());
+  });
+
+  function formatarDataBR(valorISO) {
+    if (!valorISO) return '';
+    const [ano, mes, dia] = valorISO.split('-');
+    return `${dia}/${mes}`;
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const destinatario = destinatarioInput.value.trim();
+    const dataBR = formatarDataBR(dataInput.value);
+    const loja = lojaInput.value.trim();
+    const cnpj = cnpjInput.value.trim();
+    const telefone = telefoneInput.value.trim();
+
+    if (!destinatario || !dataBR || !loja || !cnpj || !telefone) {
+      status.textContent = 'Preencha todos os campos antes de gerar o e-mail.';
+      return;
+    }
+
+    // Salva o destinatário definitivamente
+    localStorage.setItem('emailPadrao_destinatario', destinatario);
+
+    const assunto = `Coleta Veículos - Evento Carbank ${dataBR}`;
+
+    const corpo =
+`Olá, tudo bem?
+
+Segue abaixo os dados para a retirada dos carros do evento data ${dataBR}.
+
+Nome da loja: ${loja}
+CNPJ: ${cnpj}
+Tel contato: ${telefone}
+
+Em anexo a CNH do responsável.`;
+
+    const mailtoLink = `mailto:${encodeURIComponent(destinatario)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+
+    window.location.href = mailtoLink;
+
+    status.textContent = 'Abrindo seu programa de e-mail...';
+  });
+</script>
+
+</body>
+</html>
