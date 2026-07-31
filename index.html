@@ -385,7 +385,7 @@
     const assunto = `Coleta Veículos - Evento Carbank ${dataBR}`;
 
     const linhasPlacas = placas.length > 0
-      ? placas.join(', ')
+      ? placas.join('\n')
       : '(informar placa)';
 
     const corpo =
@@ -396,7 +396,8 @@ Segue abaixo os dados para a retirada dos carros do evento data ${dataBR}.
 Nome da loja: ${loja}
 CNPJ: ${cnpj}
 Tel contato: ${telefone}
-Placa(s): ${linhasPlacas}
+Placa(s):
+${linhasPlacas}
 
 Em anexo a CNH do responsável.`;
 
